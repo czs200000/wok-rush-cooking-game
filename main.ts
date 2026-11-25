@@ -1,27 +1,39 @@
 // Wok Rush — 小厨神快线
 // Entry for make.fun bounty "Make the best cooking game"
-// Run with Node 22.18+ (tested on Node v24.22.1):
-//   node main.ts
-// It copies game/ to out/ and writes a build manifest. No network requests.
-import { cpSync, mkdirSync, writeFileSync, existsSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+// Run with Node 22.18+ (tested on Node v24.22.1).
+// It copies game/ and screenshots/ to /output (or MAKEFUN_OUTPUT_DIR)
+// and writes /output/dossier.json with the vendored make.fun library.
+// The grader runs it with a read-only repository, so it must NOT write
+// into the repository itself (no out/ inside the repo).
+// Outside the grader, MAKEFUN_OUTPUT_DIR stands in for /output:
+//   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 
-const root: string = dirname(fileURLToPath(import.meta.url));
-const src: string = join(root, "game");
-const out: string = join(root, "out");
+import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { buildDossier } from './vendor/makefun-game.ts';
 
-if (!existsSync(src)) {
-  console.error("game/ not found next to main.ts");
-  process.exit(1);
-}
+const here = fileURLToPath(new URL('.', import.meta.url));
+const out = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
+
 mkdirSync(out, { recursive: true });
-cpSync(src, out, { recursive: true });
-const manifest: string = JSON.stringify(
-  { name: "wok-rush", title: "小厨神快线 · Wok Rush", builtAt: new Date().toISOString(), files: ["index.html"] },
-  null,
-  2
+cpSync(join(here, 'game'), join(out, 'game'), { recursive: true });
+mkdirSync(join(out, 'screenshots'), { recursive: true });
+if (existsSync(join(here, 'screenshots'))) cpSync(join(here, 'screenshots'), join(out, 'screenshots'), { recursive: true });
+
+// The scorer's own caps (reference/gate.json): only text_max_bytes shapes the bytes; the others refuse an entry the
+// scorer would refuse (more than 4 screenshots or one over 256 KiB; more than 993 files in game/ or 48 MiB of game
+// files, in all, or a path under game/ over 1000 bytes: game/ counts beside /output's own 1000-entry cap, its
+// screenshots/ and dossier.json).
+writeFileSync(
+  join(out, 'dossier.json'),
+  buildDossier(out, {
+    text_max_bytes: 163840,
+    screenshots: { max: 4, max_bytes: 262144 },
+    game_max_files: 993,
+    game_max_bytes: 50331648,
+    game_path_max_bytes: 1000,
+  }),
 );
-writeFileSync(join(out, "manifest.json"), manifest + "\n");
-console.log("Built game to " + out);
-console.log("Open out/index.html in a desktop browser to play. No network requests.");
+console.log('Built game to ' + out);
+console.log('Open game/index.html in a desktop browser to play. No network requests.');
