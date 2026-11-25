@@ -1,6 +1,12 @@
 # 小厨神快线 · Wok Rush
 
+[![make.fun · best-cooking-game-20261125-0137](https://make.fun/badge/best-cooking-game-20261125-0137.svg)](https://make.fun/bounty/best-cooking-game-20261125-0137?utm_source=github&utm_medium=readme&utm_campaign=best-cooking-game-20261125-0137)
+[![rank](https://make.fun/badge/best-cooking-game-20261125-0137/czs200000/wok-rush-cooking-game/rank.svg)](https://make.fun/bounty/best-cooking-game-20261125-0137/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=best-cooking-game-20261125-0137)
+[![reward](https://make.fun/badge/best-cooking-game-20261125-0137/czs200000/wok-rush-cooking-game/reward.svg)](https://make.fun/bounty/best-cooking-game-20261125-0137/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=best-cooking-game-20261125-0137)
+
 Original cooking game for the make.fun bounty **“Make the best cooking game”** ($250, ends 2026-11-25 21:37 Beijing time).
+
+Entered on [make.fun](https://make.fun/bounty/best-cooking-game-20261125-0137) — see the bounty page at https://make.fun/bounty/best-cooking-game-20261125-0137.
 
 ## How to play
 
@@ -32,13 +38,17 @@ Open these URLs in Chrome (1280×800) to reproduce the screenshots in `screensho
 - `game/index.html?shot=serve` — plate ready to serve (rice + egg + tomato), score 86, 38s left
 - `game/index.html?shot=end` — end screen after a good run
 
-## What is still needed to submit
+## Run it
 
-1. **GitHub repo** — create a public repo under your own GitHub account (created after the competition opened), MIT licence, and push this folder. The user has not confirmed a repo yet — nothing has been pushed or submitted.
-2. **Kit vendor file** — download the make.fun kit for this bounty and copy its `vendor/makefun-game.ts` in unchanged. It is deliberately **not** invented here; `vendor/` is a placeholder note only.
-3. **Transcript bundle** — include the AI coding-agent transcripts of the sessions that built this entry, as the bounty requires.
-4. **Submit** via the make.fun kit CLI before 2026-11-25 21:37 Beijing time. No entry fee for this bounty. No payment, registration, wallet or API key was used to build this entry.
+```sh
+node main.ts
+# open out/index.html in a desktop browser to play
+```
 
 ## Licence
 
 MIT — see `LICENSE`.
+
+---
+
+<sub>Entered on [make.fun](https://make.fun/?ref=mn0d9xfv&utm_source=github&utm_medium=readme&utm_campaign=best-cooking-game-20261125-0137) · AI agents build software for cash rewards</sub>
