@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>小厨神快线 — Wok Rush</title>
+<style>
+*{box-sizing:border-box} body{margin:0;font-family:system-ui,"PingFang SC","Microsoft YaHei",sans-serif;background:#fff3e0;color:#3d2c1e}
+header{background:#e65100;color:#fff;padding:10px 18px;display:flex;justify-content:space-between;align-items:center}
+header h1{margin:0;font-size:22px} header p{margin:0;font-size:13px;opacity:.9}
+#hud{display:flex;gap:12px;padding:10px 18px;background:#ffe0b2;font-weight:700;flex-wrap:wrap}
+#hud span{background:#fff;border:2px solid #ff9800;border-radius:10px;padding:6px 12px}
+#hud .urgent{background:#ffcdd2;border-color:#d32f2f;color:#b71c1c}
+main{display:grid;grid-template-columns:300px 1fr;gap:14px;padding:14px 18px}
+section{background:#fff;border:2px solid #ffcc80;border-radius:14px;padding:12px}
+h2{margin:0 0 10px;font-size:17px}
+.order{border:2px solid #ffb74d;border-radius:10px;padding:10px;margin-bottom:10px;background:#fff8e1}
+.order.done{border-color:#43a047;background:#e8f5e9;opacity:.75}
+.order.expired{border-color:#d32f2f;background:#ffebee;opacity:.75}
+.order .name{font-weight:800;font-size:16px}
+.order .need{margin:6px 0;color:#6d4c41}
+.order .timer{font-weight:800;color:#d84315}
+.plate{min-height:120px;border:3px dashed #ff9800;border-radius:12px;background:#fffde7;padding:10px;text-align:center}
+.plate .slot{display:inline-block;background:#ffe0b2;border-radius:8px;padding:8px 10px;margin:4px;font-weight:700}
+#counter{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.ing{border:2px solid #a1887f;border-radius:12px;padding:12px 6px;text-align:center;cursor:pointer;background:#fafafa;font-weight:700}
+.ing:hover{border-color:#e65100;background:#fff3e0;transform:translateY(-2px)}
+.ing .pic{font-size:34px;display:block}
+.ing small{display:block;color:#795548;font-weight:400}
+button{cursor:pointer;border:0;border-radius:10px;padding:12px 18px;font-size:16px;font-weight:800}
+#serve{background:#2e7d32;color:#fff;width:100%;margin-top:10px}
+#serve:disabled{background:#bdbdbd}
+#clear{background:#fff;border:2px solid #795548;color:#795548;width:100%;margin-top:8px}
+#startBtn{background:#e65100;color:#fff}
+#msg{min-height:24px;font-weight:700;color:#bf360c;margin-top:8px}
+#end{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;place-items:center}
+#end .card{background:#fff;border-radius:16px;padding:28px;text-align:center;max-width:420px}
+kbd{background:#eee;border:1px solid #999;border-radius:4px;padding:0 5px}
+.hint{font-size:13px;color:#795548}
+</style>
+</head>
+<body>
+<header><div><h1>🍳 小厨神快线 · Wok Rush</h1><p>原创快餐厨房游戏 · 点食材、组菜、上菜，别让客人等太久！</p></div><button id="startBtn">开始营业 ▶</button></header>
+<div id="hud">
+<span>⏱ 总时间 <b id="totalTime">120</b>s</span>
+<span>💰 得分 <b id="score">0</b></span>
+<span>✅ 已上菜 <b id="served">0</b></span>
+<span>🔥 连胜 <b id="streak">0</b></span>
+<span id="levelBox">第 1 波客人</span>
+</div>
+<main>
+<section>
+<h2>📋 订单板 Order Board</h2>
+<div id="orders"></div>
+<p class="hint">订单有倒计时，超时会扣分并消失。按订单要的食材依次点，点错可以点“清空盘子”。</p>
+</section>
+<section>
+<h2>🍽 正在组装的盘子</h2>
+<div class="plate" id="plate"><span style="color:#a1887f">盘子是空的 — 点下面的食材开始做菜</span></div>
+<button id="serve">上菜 Serve (S)</button>
+<button id="clear">清空盘子 Clear (C)</button>
+<div id="msg"></div>
+<h2 style="margin-top:16px">🥬 台面食材 Counter — 点 / 按数字键 1-9</h2>
+<div id="counter"></div>
+<p class="hint">快捷键：<kbd>1</kbd>–<kbd>9</kbd> 选食材 · <kbd>S</kbd> 上菜 · <kbd>C</kbd> 清空 · <kbd>Space</kbd> 开始</p>
+</section>
+</main>
+<div id="end"><div class="card"><h2 id="endTitle">打烊了！</h2><p id="endText"></p><button id="again" style="background:#e65100;color:#fff">再开一局</button></div></div>
+<script>
+const ING=[
+ {id:'rice',name:'米饭',pic:'🍚',key:'1'},
+ {id:'noodle',name:'面条',pic:'🍜',key:'2'},
+ {id:'egg',name:'鸡蛋',pic:'🥚',key:'3'},
+ {id:'tomato',name:'番茄',pic:'🍅',key:'4'},
+ {id:'chicken',name:'鸡肉',pic:'🍗',key:'5'},
+ {id:'veg',name:'青菜',pic:'🥬',key:'6'},
+ {id:'shrimp',name:'虾仁',pic:'🍤',key:'7'},
+ {id:'tofu',name:'豆腐',pic:'🧈',key:'8'},
+ {id:'chili',name:'辣椒',pic:'🌶️',key:'9'}];
+const MENU=[
+ {name:'番茄炒蛋饭',need:['rice','egg','tomato'],price:18},
+ {name:'鸡肉拉面',need:['noodle','chicken','egg'],price:22},
+ {name:'青菜豆腐饭',need:['rice','veg','tofu'],price:16},
+ {name:'虾仁炒面',need:['noodle','shrimp','veg'],price:26},
+ {name:'辣子鸡饭',need:['rice','chicken','chili'],price:24},
+ {name:'番茄虾仁面',need:['noodle','tomato','shrimp'],price:28}];
+let score=0,served=0,streak=0,total=120,plate=[],orders=[],running=false,tick=null,nextId=1;
+const $=id=>document.getElementById(id);
+const ingById=id=>ING.find(i=>i.id===id);
+function renderCounter(){$('counter').innerHTML=ING.map(i=>`<div class="ing" data-id="${i.id}" tabindex="0"><span class="pic">${i.pic}</span>${i.name}<small>按 ${i.key}</small></div>`).join('');
+ document.querySelectorAll('.ing').forEach(el=>el.onclick=()=>addIng(el.dataset.id));}
+function renderOrders(){$('orders').innerHTML=orders.map(o=>`<div class="order ${o.state}" data-id="${o.id}"><div class="name">#${o.id} ${o.name} · $${o.price}</div><div class="need">要：${o.need.map(id=>ingById(id).pic+ingById(id).name).join(' + ')}</div><div class="timer">⏱ ${o.state==='active'?o.left+'s':'—'}</div></div>`).join('')||'<p>暂无订单…</p>';}
+function renderPlate(){const p=$('plate');p.innerHTML=plate.length?plate.map(id=>`<span class="slot">${ingById(id).pic} ${ingById(id).name}</span>`).join(''):'<span style="color:#a1887f">盘子是空的 — 点下面的食材开始做菜</span>';
+ $('serve').disabled=!plate.length||!running;}
+function renderHud(){$('totalTime').textContent=total;$('score').textContent=score;$('served').textContent=served;$('streak').textContent=streak;
+ $('totalTime').parentElement.classList.toggle('urgent',total<=20);}
+function addIng(id){if(!running)return;plate.push(id);renderPlate();$('msg').textContent='已加：'+ingById(id).name;}
+function newOrder(){const m=MENU[Math.floor(Math.random()*MENU.length)];orders.push({id:nextId++,name:m.name,need:[...m.need],price:m.price,left:45,state:'active'});renderOrders();}
+function serve(){if(!plate.length||!running)return;
+ const match=orders.find(o=>o.state==='active'&&o.need.length===plate.length&&o.need.every((x,i)=>x===plate[i]));
+ if(match){score+=match.price+Math.min(10,match.left);served++;streak++;match.state='done';$('msg').textContent='✅ 上菜成功！+'+(match.price)+'分，客人很满意！';plate=[];setTimeout(()=>{orders=orders.filter(o=>o!==match);renderOrders();},900);}
+ else{score=Math.max(0,score-3);streak=0;$('msg').textContent='❌ 不对！对照订单板，食材或顺序错了，扣 3 分。';}
+ renderPlate();renderHud();renderOrders();}
+function clearPlate(){plate=[];renderPlate();$('msg').textContent='盘子已清空。';}
+function start(){if(running)return;running=true;score=0;served=0;streak=0;total=120;plate=[];orders=[];nextId=1;$('end').style.display='none';$('startBtn').textContent='营业中…';newOrder();newOrder();renderAll();
+ tick=setInterval(()=>{total--;orders.forEach(o=>{if(o.state==='active'){o.left--;if(o.left<=0){o.state='expired';score=Math.max(0,score-5);streak=0;$('msg').textContent='⏰ 订单超时，扣 5 分！';}}});
+  orders=orders.filter(o=>o.state==='active'||o.state==='done');
+  if(total%18===0&&orders.filter(o=>o.state==='active').length<3)newOrder();
+  if(total<=0)endGame();renderAll();},1000);}
+function renderAll(){renderCounter();renderOrders();renderPlate();renderHud();}
+function endGame(){running=false;clearInterval(tick);$('end').style.display='grid';$('endTitle').textContent=score>=60?'🎉 今晚的明星小厨神！':'打烊了！';$('endText').textContent=`得分 ${score} · 上菜 ${served} 道 · 最高连胜 ${streak}。${score>=60?'可以去冲排行榜了！':'多练几次，记住每道菜的配方！'}`;$('startBtn').textContent='开始营业 ▶';}
+$('serve').onclick=serve;$('clear').onclick=clearPlate;$('startBtn').onclick=start;$('again').onclick=start;
+document.addEventListener('keydown',e=>{if(e.key===' '){e.preventDefault();start();}if(e.key==='s'||e.key==='S')serve();if(e.key==='c'||e.key==='C')clearPlate();const ing=ING.find(i=>i.key===e.key);if(ing)addIng(ing.id);});
+// Demo scenes for screenshots: ?shot=start | mid | serve | end
+const shot=new URLSearchParams(location.search).get('shot');
+if(shot){running=true;score=shot==='serve'?86:shot==='mid'?34:0;served=shot==='serve'?4:shot==='mid'?1:0;streak=shot==='serve'?3:1;total=shot==='serve'?38:shot==='mid'?74:120;
+ orders=[{id:1,name:'番茄炒蛋饭',need:['rice','egg','tomato'],price:18,left:32,state:'active'},{id:2,name:'鸡肉拉面',need:['noodle','chicken','egg'],price:22,left:18,state:'active'},{id:3,name:'虾仁炒面',need:['noodle','shrimp','veg'],price:26,left:41,state:'active'}];
+ plate=shot==='start'?[]:shot==='mid'?['rice','egg']:['rice','egg','tomato'];
+ $('msg').textContent=shot==='serve'?'✅ 盘子配好了！点“上菜”就能得分。':shot==='mid'?'正在组装：米饭 + 鸡蛋，还差番茄…':'点食材开始做第一单！';
+ if(shot==='end'){running=false;$('end').style.display='grid';$('endTitle').textContent='🎉 今晚的明星小厨神！';$('endText').textContent='得分 86 · 上菜 4 道 · 最高连胜 3。可以去冲排行榜了！';}
+ renderAll();}
+else renderAll();
+</script>
+</body>
+</html>
