@@ -62,7 +62,7 @@ kbd{background:#eee;border:1px solid #999;border-radius:4px;padding:0 5px}
 <div id="msg"></div>
 <h2 style="margin-top:16px">🥬 台面食材 Counter — 点 / 按数字键 1-9</h2>
 <div id="counter"></div>
-<p class="hint">快捷键：<kbd>1</kbd>–<kbd>9</kbd> 选食材 · <kbd>S</kbd> 上菜 · <kbd>C</kbd> 清空 · <kbd>Space</kbd> 开始</p>
+<p class="hint">快捷键：<kbd>1</kbd>–<kbd>9</kbd> 选食材 · <kbd>S</kbd> 上菜 · <kbd>C</kbd> 清空 · <kbd>P</kbd> 暂停 · <kbd>Space</kbd> 开始</p>
 </section>
 </main>
 <div id="end"><div class="card"><h2 id="endTitle">打烊了！</h2><p id="endText"></p><button id="again" style="background:#e65100;color:#fff">再开一局</button></div></div>
@@ -84,7 +84,7 @@ const MENU=[
  {name:'虾仁炒面',need:['noodle','shrimp','veg'],price:26},
  {name:'辣子鸡饭',need:['rice','chicken','chili'],price:24},
  {name:'番茄虾仁面',need:['noodle','tomato','shrimp'],price:28}];
-let score=0,served=0,streak=0,total=120,plate=[],orders=[],running=false,tick=null,nextId=1;
+let score=0,served=0,streak=0,maxStreak=0,total=120,plate=[],orders=[],running=false,paused=false,tick=null,nextId=1;
 const $=id=>document.getElementById(id);
 const ingById=id=>ING.find(i=>i.id===id);
 function renderCounter(){$('counter').innerHTML=ING.map(i=>`<div class="ing" data-id="${i.id}" tabindex="0"><span class="pic">${i.pic}</span>${i.name}<small>按 ${i.key}</small></div>`).join('');
@@ -94,23 +94,24 @@ function renderPlate(){const p=$('plate');p.innerHTML=plate.length?plate.map(id=
  $('serve').disabled=!plate.length||!running;}
 function renderHud(){$('totalTime').textContent=total;$('score').textContent=score;$('served').textContent=served;$('streak').textContent=streak;
  $('totalTime').parentElement.classList.toggle('urgent',total<=20);}
-function addIng(id){if(!running)return;plate.push(id);renderPlate();$('msg').textContent='已加：'+ingById(id).name;}
+function addIng(id){if(!running||paused)return;plate.push(id);renderPlate();$('msg').textContent='已加：'+ingById(id).name;}
 function newOrder(){const m=MENU[Math.floor(Math.random()*MENU.length)];orders.push({id:nextId++,name:m.name,need:[...m.need],price:m.price,left:45,state:'active'});renderOrders();}
 function serve(){if(!plate.length||!running)return;
  const match=orders.find(o=>o.state==='active'&&o.need.length===plate.length&&o.need.every((x,i)=>x===plate[i]));
- if(match){score+=match.price+Math.min(10,match.left);served++;streak++;match.state='done';$('msg').textContent='✅ 上菜成功！+'+(match.price)+'分，客人很满意！';plate=[];setTimeout(()=>{orders=orders.filter(o=>o!==match);renderOrders();},900);}
+ if(match){score+=match.price+Math.min(10,match.left);served++;streak++;maxStreak=Math.max(maxStreak,streak);match.state='done';$('msg').textContent='✅ 上菜成功！+'+(match.price)+'分，客人很满意！';plate=[];setTimeout(()=>{orders=orders.filter(o=>o!==match);renderOrders();},900);}
  else{score=Math.max(0,score-3);streak=0;$('msg').textContent='❌ 不对！对照订单板，食材或顺序错了，扣 3 分。';}
  renderPlate();renderHud();renderOrders();}
 function clearPlate(){plate=[];renderPlate();$('msg').textContent='盘子已清空。';}
-function start(){if(running)return;running=true;score=0;served=0;streak=0;total=120;plate=[];orders=[];nextId=1;$('end').style.display='none';$('startBtn').textContent='营业中…';newOrder();newOrder();renderAll();
- tick=setInterval(()=>{total--;orders.forEach(o=>{if(o.state==='active'){o.left--;if(o.left<=0){o.state='expired';score=Math.max(0,score-5);streak=0;$('msg').textContent='⏰ 订单超时，扣 5 分！';}}});
+function start(){if(running)return;running=true;paused=false;score=0;served=0;streak=0;maxStreak=0;total=120;plate=[];orders=[];nextId=1;$('end').style.display='none';$('startBtn').textContent='营业中…';newOrder();newOrder();renderAll();
+ tick=setInterval(()=>{if(paused)return;total--;orders.forEach(o=>{if(o.state==='active'){o.left--;if(o.left<=0){o.state='expired';score=Math.max(0,score-5);streak=0;$('msg').textContent='⏰ 订单超时，扣 5 分！';}}});
   orders=orders.filter(o=>o.state==='active'||o.state==='done');
   if(total%18===0&&orders.filter(o=>o.state==='active').length<3)newOrder();
   if(total<=0)endGame();renderAll();},1000);}
 function renderAll(){renderCounter();renderOrders();renderPlate();renderHud();}
-function endGame(){running=false;clearInterval(tick);$('end').style.display='grid';$('endTitle').textContent=score>=60?'🎉 今晚的明星小厨神！':'打烊了！';$('endText').textContent=`得分 ${score} · 上菜 ${served} 道 · 最高连胜 ${streak}。${score>=60?'可以去冲排行榜了！':'多练几次，记住每道菜的配方！'}`;$('startBtn').textContent='开始营业 ▶';}
+function togglePause(){if(!running)return;paused=!paused;$('msg').textContent=paused?'⏸ 已暂停，按 P 继续。':'▶ 继续营业！';$('startBtn').textContent=paused?'已暂停 ⏸':'营业中…';}
+function endGame(){running=false;paused=false;clearInterval(tick);$('end').style.display='grid';$('endTitle').textContent=score>=60?'🎉 今晚的明星小厨神！':'打烊了！';$('endText').textContent=`得分 ${score} · 上菜 ${served} 道 · 最高连胜 ${maxStreak}。${score>=60?'可以去冲排行榜了！':'多练几次，记住每道菜的配方！'}`;$('startBtn').textContent='开始营业 ▶';}
 $('serve').onclick=serve;$('clear').onclick=clearPlate;$('startBtn').onclick=start;$('again').onclick=start;
-document.addEventListener('keydown',e=>{if(e.key===' '){e.preventDefault();start();}if(e.key==='s'||e.key==='S')serve();if(e.key==='c'||e.key==='C')clearPlate();const ing=ING.find(i=>i.key===e.key);if(ing)addIng(ing.id);});
+document.addEventListener('keydown',e=>{if(e.key===' '){e.preventDefault();start();}if(e.key==='p'||e.key==='P')togglePause();if(e.key==='s'||e.key==='S')serve();if(e.key==='c'||e.key==='C')clearPlate();const ing=ING.find(i=>i.key===e.key);if(ing)addIng(ing.id);});
 // Demo scenes for screenshots: ?shot=start | mid | serve | end
 const shot=new URLSearchParams(location.search).get('shot');
 if(shot){running=true;score=shot==='serve'?86:shot==='mid'?34:0;served=shot==='serve'?4:shot==='mid'?1:0;streak=shot==='serve'?3:1;total=shot==='serve'?38:shot==='mid'?74:120;
